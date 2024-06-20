@@ -15,140 +15,182 @@
     <div id="notification-info"></div>
     <script>
         class AltMesh {
-            constructor() {
+            static SERVICE_UUID = "72c90001-57a9-4d40-b746-534e22ec9f9e";
+            static CHARACTERISTIC_UUID_WRITE = "72c90004-57a9-4d40-b746-534e22ec9f9e";
+            static CHARACTERISTIC_UUID_WRITE_WO_RESPONSE = "72c90002-57a9-4d40-b746-534e22ec9f9e";
+            static CHARACTERISTIC_UUID_INDICATE = "72c90005-57a9-4d40-b746-534e22ec9f9e";
+            static CHARACTERISTIC_UUID_NOTIFY = "72c90003-57a9-4d40-b746-534e22ec9f9e";
+
+            constructor(name_prefix = "MESH-100") {
+                this.name_prefix = name_prefix;
+                this.listeners = {};
+
+                const parseCommandFrame = (command_frame) => {
+                    const length = command_frame.length;
+                    const sum = command_frame.reduce((a, c) => a + c, 0);
+                    const last = command_frame[length - 1];
+                    const checksum = (sum - last) & 0xFF;
+
+                    if (length < 3) {
+                        throw new Error("length error");
+                    }
+                    if (checksum != last) {
+                        throw new Error("checksum error");
+                    }
+                    const remain_frames = (command_frame[0] & 0xF0) >> 4;
+                    const message_type = (command_frame[0] & 0x0F) >> 0;
+                    const event_type = command_frame[1];
+                    const data = command_frame.slice(2, length - 1);
+                    return { message_type, event_type, data };
+                };
+
+                this.addEventListener("bleindicate", (command_frame) => {
+                    console.debug(">>>> bleindicate", command_frame);
+                    try {
+                        const { message_type, event_type, data } = parseCommandFrame(command_frame);
+                        this.dispatchEvent("meshindicate", message_type, event_type, data);
+                    } catch (error) {
+                        console.error(error);
+                    }
+                    console.debug("<<<< bleindicate");
+                });
+                this.addEventListener("blenotify", (command_frame) => {
+                    console.debug(">>>> blenotify", command_frame);
+                    try {
+                        const { message_type, event_type, data } = parseCommandFrame(command_frame);
+                        this.dispatchEvent("meshnotify", message_type, event_type, data);
+                    } catch (error) {
+                        console.error(error);
+                    }
+                    console.debug("<<<< blenotify");
+                });
+            }
+
+            addEventListener(type, listener) {
+                if (typeof this.listeners[type] === "undefined") {
+                    this.listeners[type] = [];
+                }
+                this.listeners[type].push(listener);
+            }
+
+            removeEventListener(type, listener) {
+                if (typeof this.listeners[type] === "undefined") {
+                    this.listeners[type] = [];
+                }
+                this.listeners[type] = this.listeners[type].filter((e) => e !== listener);
+            }
+
+            dispatchEvent(type, ...args) {
+                if (typeof this.listeners[type] === "undefined") {
+                    this.listeners[type] = [];
+                }
+                if (this.listeners[type].length === 0) {
+                    console.debug("no listener for", type);
+                } else {
+                    this.listeners[type].forEach((e) => e(...args));
+                }
+            }
+
+            async connect() {
+                console.debug(">>>> connect");
+                const options = {
+                    filters: [
+                        { services: [AltMesh.SERVICE_UUID] },
+                        { namePrefix: this.name_prefix }
+                    ],
+                    optionalServices: [AltMesh.SERVICE_UUID],
+                };
+                try {
+                    this.device = await navigator.bluetooth.requestDevice(options);
+                    console.log("device name", this.device.name);
+                    this.server = await this.device.gatt.connect();
+                    this.service = await this.server.getPrimaryService(AltMesh.SERVICE_UUID);
+                    this.characteristics = await this.service.getCharacteristics();
+                    this.characteristic_write_wo_response = await this.service.getCharacteristic(AltMesh.CHARACTERISTIC_UUID_WRITE_WO_RESPONSE);
+                    this.characteristic_indicate = await this.service.getCharacteristic(AltMesh.CHARACTERISTIC_UUID_INDICATE);
+                    this.characteristic_notify = await this.service.getCharacteristic(AltMesh.CHARACTERISTIC_UUID_NOTIFY);
+
+                    this.characteristic_indicate.addEventListener("characteristicvaluechanged", async (event) => {
+                        const buffer = Array(event.target.value.byteLength).fill();
+                        const command_frame = buffer.map((_, i) => event.target.value.getUint8(i));
+                        this.dispatchEvent("bleindicate", command_frame);
+                    });
+                    this.characteristic_notify.addEventListener("characteristicvaluechanged", async (event) => {
+                        const buffer = Array(event.target.value.byteLength).fill();
+                        const command_frame = buffer.map((_, i) => event.target.value.getUint8(i));
+                        this.dispatchEvent("blenotify", command_frame);
+                    });
+                    this.characteristic_indicate.startNotifications();
+                    this.characteristic_notify.startNotifications();
+                } catch (error) {
+                    console.error(error);
+                }
+                console.debug("<<<< connect");
             }
 
             async write(message_type, event_type, data, append_checksum = true) {
+                console.debug(">>>> write", message_type, event_type, data);
                 try {
                     const command_frame = [message_type, event_type, data, 0].flat();
                     const length = command_frame.length;
                     command_frame[length - 1] = command_frame.reduce((acc, cur) => acc + cur, 0);
                     console.log("writing:", command_frame);
                     const value = new Uint8Array(command_frame);
-                    await this.characteristic_w.writeValue(value);
+                    await this.characteristic_write_wo_response.writeValue(value);
                 } catch (error) {
                     console.error(error);
                 }
-            }
-
-            async onIndicate(message_type, event_type, data) {
-                let handled = false;
-                if (message_type == 0x00 && event_type == 0x02 && data.length >= 13) {
-                    const blockType = ({ 0x00: "LE", 0x01: "AC", 0x02: "BU", 0x09: "GP", 0x10: "MD", 0x11: "PA", 0x12: "TH" })[data[0]] || data[0];
-                    const serialNumber = ((data[1]) << 0) | ((data[2]) << 8) | ((data[3]) << 16) | ((data[4]) << 24);
-                    const majorVersion = data[5];
-                    const minorVersion = data[6];
-                    const releaseNumber = data[7];
-                    const batteryLevel = data[12];
-                    console.log("indicate: block=%s SN=%d version=%d.%d.%d battery=%d%%", blockType, serialNumber, majorVersion, minorVersion, releaseNumber, batteryLevel * 10);
-                    await this.write(0x00, 0x02, [0x01]);
-                    return true;
-                }
-                else {
-                    console.log("indicate:", message_type, event_type, data);
-                    return false;
-                }
-            }
-
-            async onNotify(message_type, event_type, data) {
-                if (message_type == 0x00 && event_type == 0x00 && data.length >= 1) {
-                    console.log("notify: batteryLevel=%d%%", data[0] * 10);
-                    return true;
-                }
-                else if (message_type == 0x00 && event_type == 0x01 && data.length >= 1) {
-                    console.log("notify: iconEvent=%d", data[0]);
-                    return true;
-                }
-                else if (message_type == 0x00 && event_type == 0x02 && data.length >= 13) {
-                    const blockType = ({ 0x00: "LE", 0x01: "AC", 0x02: "BU", 0x09: "GP", 0x10: "MD", 0x11: "PA", 0x12: "TH" })[data[0]] || data[0];
-                    const serialNumber = ((data[1]) << 0) | ((data[2]) << 8) | ((data[3]) << 16) | ((data[4]) << 24);
-                    const majorVersion = data[5];
-                    const minorVersion = data[6];
-                    const releaseNumber = data[7];
-                    const batteryLevel = data[12];
-                    console.log("notify: block=%s SN=%d version=%d.%d.%d battery=%d%%", blockType, serialNumber, majorVersion, minorVersion, releaseNumber, batteryLevel * 10);
-                    return true;
-                }
-                else {
-                    console.log("notify:", message_type, event_type, data);
-                    return false;
-                }
-            }
-
-            async connect(name_prefix = "MESH-100") {
-                const SERVICE_UUID = "72c90001-57a9-4d40-b746-534e22ec9f9e";
-                const CHARACTERISTIC_UUID_W = "72c90004-57a9-4d40-b746-534e22ec9f9e";
-                const CHARACTERISTIC_UUID_WNR = "72c90002-57a9-4d40-b746-534e22ec9f9e";
-                const CHARACTERISTIC_UUID_I = "72c90005-57a9-4d40-b746-534e22ec9f9e";
-                const CHARACTERISTIC_UUID_N = "72c90003-57a9-4d40-b746-534e22ec9f9e";
-                const options = {
-                    filters: [
-                        { services: [SERVICE_UUID] },
-                        { namePrefix: name_prefix }
-                    ],
-                    optionalServices: [SERVICE_UUID],
-                };
-                try {
-                    this.device = await navigator.bluetooth.requestDevice(options);
-                    console.log("device name", this.device.name);
-                    this.server = await this.device.gatt.connect();
-                    this.service = await this.server.getPrimaryService(SERVICE_UUID);
-                    this.characteristics = await this.service.getCharacteristics();
-                    this.characteristic_w = await this.service.getCharacteristic(CHARACTERISTIC_UUID_WNR);
-                    this.characteristic_i = await this.service.getCharacteristic(CHARACTERISTIC_UUID_I);
-                    this.characteristic_n = await this.service.getCharacteristic(CHARACTERISTIC_UUID_N);
-
-                    const listener = async (event, f) => {
-                        const raw = event.target.value;
-                        const command_frame = Array(raw.byteLength).fill().map((_, i) => raw.getUint8(i));
-
-                        const length = command_frame.length;
-                        const sum = command_frame.reduce((acc, cur) => acc + cur, 0);
-                        const last = command_frame[length - 1];
-                        const checksum = (sum - last) & 0xFF;
-
-                        if (length < 3) {
-                            console.log("length error", length);
-                        }
-                        if (checksum != last) {
-                            console.log("checksum error", checksum);
-                        }
-                        const remain_frames = (command_frame[0] & 0xF0) >> 4;
-                        const message_type = (command_frame[0] & 0x0F) >> 0;
-                        const event_type = command_frame[1];
-                        const data = command_frame.slice(2, length - 1);
-
-                        await f.call(this, message_type, event_type, data);
-                    }
-
-                    this.characteristic_i.addEventListener("characteristicvaluechanged", async (event) => {
-                        await listener(event, this.onIndicate);
-                    });
-                    this.characteristic_n.addEventListener("characteristicvaluechanged", async (event) => {
-                        await listener(event, this.onNotify);
-                    });
-                    this.characteristic_i.startNotifications();
-                    this.characteristic_n.startNotifications();
-                } catch (error) {
-                    console.error(error);
-                }
+                console.debug("<<<< write");
             }
         }
 
-        class AltMeshButton extends AltMesh {
+        class AltMeshBase extends AltMesh {
+            constructor() {
+                super("MESH-100");
+
+                this.addEventListener("meshindicate", (message_type, event_type, data) => {
+                    const cmdid = [message_type, event_type, data.length + 2 + 1].toString();
+                    console.debug(">>>> meshindicate", message_type, event_type, data);
+                    if (cmdid === [0, 2, 16].toString()) {
+                        this.dispatchEvent("baseindicate", data[12]);
+                    }
+                    console.debug("<<<< meshindicate");
+                });
+                this.addEventListener("meshnotify", (message_type, event_type, data) => {
+                    const cmdid = [message_type, event_type, data.length + 2 + 1].toString();
+                    console.debug(">>>> meshnotify", message_type, event_type, data);
+                    if (cmdid === [0, 0, 4].toString()) {
+                        this.dispatchEvent("baseregularly", data[12]);
+                    }
+                    if (cmdid === [0, 1, 4].toString()) {
+                        this.dispatchEvent("basestatusbuttonpressed", data[0]);
+                    }
+                    console.debug("<<<< meshnotify");
+                });
+
+                this.addEventListener("baseindicate", (data) => {
+                    this.write(0, 2, [1]);
+                });
+                this.addEventListener("baseregularly", (data) => {
+                    this.dispatchEvent("batterylevel", data[0]);
+                });
+                this.addEventListener("basestatusbuttonpressed", (data) => {
+                    this.dispatchEvent("statusbutton", data[0]);
+                });
+            }
+        }
+
+        class AltMeshButton extends AltMeshBase {
             constructor() {
                 super("MESH-100BU");
-            }
-            async onNotify(message_type, event_type, data) {
-                if (super.onNotify(message_type, event_type, data)) {
-                    return true;
-                }
-                else if (message_type == 0x01 && event_type == 0x00 && data.length >= 1) {
-                    console.log("notify: Button status=%s", data[0].toString(16).padStart(2, "0"));
-                    return true;
-                } else {
-                    return false;
-                }
+                this.addEventListener("meshnotify", (message_type, event_type, data) => {
+                    const cmdid = [message_type, event_type, data.length + 2 + 1].toString();
+                    console.debug(">>>> meshnotify", message_type, event_type, data);
+                    if (cmdid === [1, 0, 4].toString()) {
+                        this.dispatchEvent("buttonpressed", data[0]);
+                    }
+                    console.debug("<<<< meshnotify");
+                });
             }
         }
     </script>
@@ -157,7 +199,7 @@
         document.ble_devices = devices;
         const connectButton = document.querySelector("#connect");
         connectButton.addEventListener("click", async () => {
-            let device = new AltMeshButton();
+            const device = new AltMeshButton();
             await device.connect();
         });
     </script>
