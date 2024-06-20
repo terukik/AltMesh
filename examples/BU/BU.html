@@ -14,127 +14,151 @@
     <div id="device-info"></div>
     <div id="notification-info"></div>
     <script>
+        class AltMesh {
+            constructor() {
+            }
+
+            async write(message_type, event_type, data, append_checksum = true) {
+                try {
+                    const command_frame = [message_type, event_type, data, 0].flat();
+                    const length = command_frame.length;
+                    command_frame[length - 1] = command_frame.reduce((acc, cur) => acc + cur, 0);
+                    console.log("writing:", command_frame);
+                    const value = new Uint8Array(command_frame);
+                    await this.characteristic_w.writeValue(value);
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+
+            async onIndicate(message_type, event_type, data) {
+                let handled = false;
+                if (message_type == 0x00 && event_type == 0x02 && data.length >= 13) {
+                    const blockType = ({ 0x00: "LE", 0x01: "AC", 0x02: "BU", 0x09: "GP", 0x10: "MD", 0x11: "PA", 0x12: "TH" })[data[0]] || data[0];
+                    const serialNumber = ((data[1]) << 0) | ((data[2]) << 8) | ((data[3]) << 16) | ((data[4]) << 24);
+                    const majorVersion = data[5];
+                    const minorVersion = data[6];
+                    const releaseNumber = data[7];
+                    const batteryLevel = data[12];
+                    console.log("indicate: block=%s SN=%d version=%d.%d.%d battery=%d%%", blockType, serialNumber, majorVersion, minorVersion, releaseNumber, batteryLevel * 10);
+                    await this.write(0x00, 0x02, [0x01]);
+                    return true;
+                }
+                else {
+                    console.log("indicate:", message_type, event_type, data);
+                    return false;
+                }
+            }
+
+            async onNotify(message_type, event_type, data) {
+                if (message_type == 0x00 && event_type == 0x00 && data.length >= 1) {
+                    console.log("notify: batteryLevel=%d%%", data[0] * 10);
+                    return true;
+                }
+                else if (message_type == 0x00 && event_type == 0x01 && data.length >= 1) {
+                    console.log("notify: iconEvent=%d", data[0]);
+                    return true;
+                }
+                else if (message_type == 0x00 && event_type == 0x02 && data.length >= 13) {
+                    const blockType = ({ 0x00: "LE", 0x01: "AC", 0x02: "BU", 0x09: "GP", 0x10: "MD", 0x11: "PA", 0x12: "TH" })[data[0]] || data[0];
+                    const serialNumber = ((data[1]) << 0) | ((data[2]) << 8) | ((data[3]) << 16) | ((data[4]) << 24);
+                    const majorVersion = data[5];
+                    const minorVersion = data[6];
+                    const releaseNumber = data[7];
+                    const batteryLevel = data[12];
+                    console.log("notify: block=%s SN=%d version=%d.%d.%d battery=%d%%", blockType, serialNumber, majorVersion, minorVersion, releaseNumber, batteryLevel * 10);
+                    return true;
+                }
+                else {
+                    console.log("notify:", message_type, event_type, data);
+                    return false;
+                }
+            }
+
+            async connect(name_prefix = "MESH-100") {
+                const SERVICE_UUID = "72c90001-57a9-4d40-b746-534e22ec9f9e";
+                const CHARACTERISTIC_UUID_W = "72c90004-57a9-4d40-b746-534e22ec9f9e";
+                const CHARACTERISTIC_UUID_WNR = "72c90002-57a9-4d40-b746-534e22ec9f9e";
+                const CHARACTERISTIC_UUID_I = "72c90005-57a9-4d40-b746-534e22ec9f9e";
+                const CHARACTERISTIC_UUID_N = "72c90003-57a9-4d40-b746-534e22ec9f9e";
+                const options = {
+                    filters: [
+                        { services: [SERVICE_UUID] },
+                        { namePrefix: name_prefix }
+                    ],
+                    optionalServices: [SERVICE_UUID],
+                };
+                try {
+                    this.device = await navigator.bluetooth.requestDevice(options);
+                    console.log("device name", this.device.name);
+                    this.server = await this.device.gatt.connect();
+                    this.service = await this.server.getPrimaryService(SERVICE_UUID);
+                    this.characteristics = await this.service.getCharacteristics();
+                    this.characteristic_w = await this.service.getCharacteristic(CHARACTERISTIC_UUID_WNR);
+                    this.characteristic_i = await this.service.getCharacteristic(CHARACTERISTIC_UUID_I);
+                    this.characteristic_n = await this.service.getCharacteristic(CHARACTERISTIC_UUID_N);
+
+                    const listener = async (event, f) => {
+                        const raw = event.target.value;
+                        const command_frame = Array(raw.byteLength).fill().map((_, i) => raw.getUint8(i));
+
+                        const length = command_frame.length;
+                        const sum = command_frame.reduce((acc, cur) => acc + cur, 0);
+                        const last = command_frame[length - 1];
+                        const checksum = (sum - last) & 0xFF;
+
+                        if (length < 3) {
+                            console.log("length error", length);
+                        }
+                        if (checksum != last) {
+                            console.log("checksum error", checksum);
+                        }
+                        const remain_frames = (command_frame[0] & 0xF0) >> 4;
+                        const message_type = (command_frame[0] & 0x0F) >> 0;
+                        const event_type = command_frame[1];
+                        const data = command_frame.slice(2, length - 1);
+
+                        await f.call(this, message_type, event_type, data);
+                    }
+
+                    this.characteristic_i.addEventListener("characteristicvaluechanged", async (event) => {
+                        await listener(event, this.onIndicate);
+                    });
+                    this.characteristic_n.addEventListener("characteristicvaluechanged", async (event) => {
+                        await listener(event, this.onNotify);
+                    });
+                    this.characteristic_i.startNotifications();
+                    this.characteristic_n.startNotifications();
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+        }
+
+        class AltMeshButton extends AltMesh {
+            constructor() {
+                super("MESH-100BU");
+            }
+            async onNotify(message_type, event_type, data) {
+                if (super.onNotify(message_type, event_type, data)) {
+                    return true;
+                }
+                else if (message_type == 0x01 && event_type == 0x00 && data.length >= 1) {
+                    console.log("notify: Button status=%s", data[0].toString(16).padStart(2, "0"));
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
+    </script>
+    <script>
         let devices = [];
         document.ble_devices = devices;
         const connectButton = document.querySelector("#connect");
         connectButton.addEventListener("click", async () => {
-            const service_uuid = "72c90001-57a9-4d40-b746-534e22ec9f9e";
-            const write_characteristic_uuid = "72c90004-57a9-4d40-b746-534e22ec9f9e";
-            const writenr_characteristic_uuid = "72c90002-57a9-4d40-b746-534e22ec9f9e";
-            const indicate_characteristic_uuid = "72c90005-57a9-4d40-b746-534e22ec9f9e";
-            const notify_characteristic_uuid = "72c90003-57a9-4d40-b746-534e22ec9f9e";
-            const options = {
-                filters: [
-                    { services: [service_uuid] },
-                    { namePrefix: "MESH-" }
-                ],
-                optionalServices: [service_uuid],
-            };
-
-            try {
-                const device = await navigator.bluetooth.requestDevice(options);
-                console.log("device name", device.name);
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(service_uuid);
-                const characteristics = await service.getCharacteristics();
-                const writenr_characteristic = await service.getCharacteristic(writenr_characteristic_uuid);
-                const indicate_characteristic = await service.getCharacteristic(indicate_characteristic_uuid);
-                const notify_characteristic = await service.getCharacteristic(notify_characteristic_uuid);
-
-                const write = async (message_type, event_type, data) => {
-                    try {
-                        const command_frame = [message_type, event_type, data, 0].flat();
-                        const length = command_frame.length;
-                        command_frame[length - 1] = command_frame.reduce((acc, cur) => acc + cur, 0);
-                        console.log("writing:", command_frame);
-                        const value = new Uint8Array(command_frame);
-                        await writenr_characteristic.writeValue(value);
-                    } catch (error) {
-                        console.error(error);
-                    }
-                };
-                const handleIndicate = async (message_type, event_type, data) => {
-                    if (message_type == 0x00 && event_type == 0x02 && data.length >= 13) {
-                        const blockType = ({ 0x00: "LE", 0x01: "AC", 0x02: "BU", 0x09: "GP", 0x10: "MD", 0x11: "PA", 0x12: "TH" })[data[0]] || data[0];
-                        const serialNumber = ((data[1]) << 0) | ((data[2]) << 8) | ((data[3]) << 16) | ((data[4]) << 24);
-                        const majorVersion = data[5];
-                        const minorVersion = data[6];
-                        const releaseNumber = data[7];
-                        const batteryLevel = data[12];
-                        console.log("indicate: block=%s SN=%d version=%d.%d.%d battery=%d%%", blockType, serialNumber, majorVersion, minorVersion, releaseNumber, batteryLevel * 10);
-                    }
-                    else {
-                        console.log("indicate:", message_type, event_type, data);
-                    }
-                }
-                const handleNotify = async (message_type, event_type, data) => {
-                    if (message_type == 0x00 && event_type == 0x00 && data.length >= 1) {
-                        console.log("notify: batteryLevel=%d%%", data[0] * 10);
-                    }
-                    else if (message_type == 0x00 && event_type == 0x01 && data.length >= 1) {
-                        console.log("notify: iconEvent=%d", data[0]);
-                    }
-                    else if (message_type == 0x00 && event_type == 0x02 && data.length >= 13) {
-                        const blockType = ({ 0x00: "LE", 0x01: "AC", 0x02: "BU", 0x09: "GP", 0x10: "MD", 0x11: "PA", 0x12: "TH" })[data[0]] || data[0];
-                        const serialNumber = ((data[1]) << 0) | ((data[2]) << 8) | ((data[3]) << 16) | ((data[4]) << 24);
-                        const majorVersion = data[5];
-                        const minorVersion = data[6];
-                        const releaseNumber = data[7];
-                        const batteryLevel = data[12];
-                        console.log("notify: block=%s SN=%d version=%d.%d.%d battery=%d%%", blockType, serialNumber, majorVersion, minorVersion, releaseNumber, batteryLevel * 10);
-                    }
-                    else if (message_type == 0x01 && event_type == 0x00 && data.length >= 1) {
-                        console.log("notify: Button status=%s", data[0].toString(16).padStart(2, "0"));
-                    }
-                    else {
-                        console.log("notify:", message_type, event_type, data);
-                    }
-                };
-                const handleCommandFrame = async (handler, command_frame) => {
-                    const length = command_frame.length;
-                    const sum = command_frame.reduce((acc, cur) => acc + cur, 0);
-                    const last = command_frame[length - 1];
-                    const checksum = (sum - last) & 0xFF;
-
-                    if (length < 3) {
-                        console.log("length error", length);
-                    }
-                    if (checksum != last) {
-                        console.log("checksum error", checksum);
-                    }
-                    const remain_frames = (command_frame[0] & 0xF0) >> 4;
-                    const message_type = (command_frame[0] & 0x0F) >> 0;
-                    const event_type = command_frame[1];
-                    const data = command_frame.slice(2, length - 1);
-                    handler(message_type, event_type, data);
-                };
-                indicate_characteristic.addEventListener("characteristicvaluechanged", async (event) => {
-                    // console.log("indicate:", event);
-                    const value = event.target.value;
-                    const length = value.byteLength;
-                    const command_frame = Array(length).fill().map((_, i) => value.getUint8(i));
-                    handleCommandFrame(handleIndicate, command_frame);
-                });
-                notify_characteristic.addEventListener("characteristicvaluechanged", async (event) => {
-                    // console.log("notify:", event);
-                    const value = event.target.value;
-                    const length = value.byteLength;
-                    const command_frame = Array(length).fill().map((_, i) => value.getUint8(i));
-                    handleCommandFrame(handleNotify, command_frame);
-                });
-                indicate_characteristic.startNotifications();
-                notify_characteristic.startNotifications();
-
-                write(0x00, 0x02, [0x01]);
-
-                devices.push({
-                    device: device,
-                    service: service,
-                    characteristics: characteristics,
-                });
-            } catch (error) {
-                console.error(error);
-            }
+            let device = new AltMeshButton();
+            await device.connect();
         });
     </script>
 </body>
