@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AltMesh</title>
+    <style>
+        .font-mono {
+            font-family: monospace;
+        }
+
+        .text-bu {
+            color: #87c244;
+        }
+
+        .text-le {
+            color: #f0811e;
+        }
+
+        .text-ac {
+            color: #23acd6;
+        }
+
+        .text-md {
+            color: #7bc9c2;
+        }
+
+        .text-pa {
+            color: #659ed1;
+        }
+
+        .text-th {
+            color: #6e72b4;
+        }
+
+        .text-gp {
+            color: #afaeae;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>AltMesh</h1>
+    <button id="connect">Connect</button>
+    <button id="connect-bu"><span class="font-mono text-bu">&#x25A0;</span>Button</button>
+    <button id="connect-le"><span class="font-mono text-le">&#x25A0;</span>LED</button>
+    <button id="connect-ac"><span class="font-mono text-ac">&#x25A0;</span>Move</button>
+    <button id="connect-md"><span class="font-mono text-md">&#x25A0;</span>Motion</button>
+    <button id="connect-pa"><span class="font-mono text-pa">&#x25A0;</span>Brightness</button>
+    <button id="connect-th"><span class="font-mono text-th">&#x25A0;</span>Temperature & Humidity</button>
+    <button id="connect-gp"><span class="font-mono text-gp">&#x25A0;</span>GPIO</button>
+    <div id="device-info">
+    </div>
+    <div id="notification-info"></div>
+    <script src="altmesh.js"></script>
+    <script>
+        let devices = [];
+        document.ble_devices = devices;
+        document.querySelector('#connect').addEventListener('click', async () => {
+            const device = new AltMeshBase();
+            await device.connect();
+            devices.push(device);
+        });
+        document.querySelector('#connect-bu').addEventListener('click', async () => {
+            const device = new AltMeshButton(async (e) => {
+                await device.write_with_response([0x00, 0x02, 0x01]);
+            });
+            device.addEventListener('button', (e) => {
+                const status_name = { 0x01: 'singlepress', 0x02: 'longpress', 0x03: 'doublepress' }[e.status];
+                console.log(`button: ${status_name}`);
+            });
+            device.addEventListener('statusbutton', (e) => {
+                const status_name = { 0x00: 'singlepress', 0x01: 'longpress' }[e.status];
+                console.log(`statusbutton: ${status_name}`);
+            });
+            device.addEventListener('disconnect', (e) => {
+                console.log(`disconnect:`);
+            });
+            await device.connect();
+            devices.push(device);
+        });
+        document.querySelector('#connect-le').addEventListener('click', async () => {
+            const device = new AltMeshLED(async (e) => {
+                await device.write_with_response([0x00, 0x02, 0x01]);
+            });
+            await device.connect();
+            devices.push(device);
+        });
+        document.querySelector('#connect-ac').addEventListener('click', async () => {
+            const device = new AltMeshMove(async (e) => {
+                await device.write_with_response([0x00, 0x02, 0x01]);
+            });
+            device.addEventListener('tap', (e) => {
+                console.log(`tap: x=${e.x}, y=${e.y}, z=${e.z}`);
+            });
+            device.addEventListener('shake', (e) => {
+                console.log(`shake: x=${e.x}, y=${e.y}, z=${e.z}`);
+            });
+            device.addEventListener('flip', (e) => {
+                console.log(`flip: x=${e.x}, y=${e.y}, z=${e.z}`);
+            });
+            device.addEventListener('orientation', (e) => {
+                console.log(`orientation: ${e.orientation}, x=${e.x}, y=${e.y}, z=${e.z}`);
+            });
+            await device.connect();
+            devices.push(device);
+        });
+        document.querySelector('#connect-md').addEventListener('click', async () => {
+            const device = new AltMeshMotion(async (e) => {
+                await device.write_with_response([0x00, 0x02, 0x01]);
+            });
+            await device.connect();
+            devices.push(device);
+        });
+        document.querySelector('#connect-pa').addEventListener('click', async () => {
+            const device = new AltMeshBrightness(async (e) => {
+                await device.write_with_response([0x00, 0x02, 0x01]);
+            });
+            await device.connect();
+            devices.push(device);
+        });
+        document.querySelector('#connect-th').addEventListener('click', async () => {
+            const device = new AltMeshTempHumid(async (e) => {
+                await device.write_with_response([0x00, 0x02, 0x01]);
+                await device.write([0x01, 0x00, 0x01, 0x2C, 0x81, 0xB4, 0x80, 0x64, 0x00, 0x32, 0x00, 0x00, 0x01, 0x20]);
+            });
+            device.addEventListener('temphumid', (e) => {
+                console.log(`temphumid: ${e.temperature}\u2103 ${e.humidity}%`);
+            });
+            await device.connect();
+            devices.push(device);
+        });
+        document.querySelector('#connect-gp').addEventListener('click', async () => {
+            const device = new AltMeshGPIO(async (e) => {
+                await device.write_with_response([0x00, 0x02, 0x01]);
+                await device.write([0x01, 0x01, 0x07, 0x07, 0x00, 0x00, 0x02, 0x7F, 0x00, 0x01]);
+            });
+            await device.connect();
+            devices.push(device);
+        });
+    </script>
+</body>
+
+</html>
