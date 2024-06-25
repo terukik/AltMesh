@@ -637,9 +637,13 @@
                 element.querySelector('.status').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
             });
 
-            await device.connect();
-            devices.push(device);
             container.appendChild(element);
+            await device.connect();
+            if (device.device) {
+                devices.push(device);
+            } else {
+                container.removeChild(element);
+            }
         });
         document.querySelector('#connect-le').addEventListener('click', async () => {
             const device = new AltMeshLED(async (e) => {
@@ -674,9 +678,13 @@
                 element.querySelector('.status-button').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
             });
 
-            await device.connect();
-            devices.push(device);
             container.appendChild(element);
+            await device.connect();
+            if (device.device) {
+                devices.push(device);
+            } else {
+                container.removeChild(element);
+            }
         });
         document.querySelector('#connect-ac').addEventListener('click', async () => {
             const device = new AltMeshMove(async (e) => {
@@ -742,9 +750,13 @@
                 element.querySelector('.z').innerHTML = `${e.z}`;
             });
 
-            await device.connect();
-            devices.push(device);
             container.appendChild(element);
+            await device.connect();
+            if (device.device) {
+                devices.push(device);
+            } else {
+                container.removeChild(element);
+            }
         });
         document.querySelector('#connect-md').addEventListener('click', async () => {
             const device = new AltMeshMotion(async (e) => {
@@ -779,9 +791,13 @@
                 element.querySelector('.status-button').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
             });
 
-            await device.connect();
-            devices.push(device);
             container.appendChild(element);
+            await device.connect();
+            if (device.device) {
+                devices.push(device);
+            } else {
+                container.removeChild(element);
+            }
         });
         document.querySelector('#connect-pa').addEventListener('click', async () => {
             const device = new AltMeshBrightness(async (e) => {
@@ -816,9 +832,13 @@
                 element.querySelector('.status-button').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
             });
 
-            await device.connect();
-            devices.push(device);
             container.appendChild(element);
+            await device.connect();
+            if (device.device) {
+                devices.push(device);
+            } else {
+                container.removeChild(element);
+            }
         });
         document.querySelector('#connect-th').addEventListener('click', async () => {
             const device = new AltMeshTempHumid(async (e) => {
@@ -859,9 +879,13 @@
                 element.querySelector('.humidity').innerHTML = `${e.humidity}%`;
             });
 
-            await device.connect();
-            devices.push(device);
             container.appendChild(element);
+            await device.connect();
+            if (device.device) {
+                devices.push(device);
+            } else {
+                container.removeChild(element);
+            }
         });
         document.querySelector('#connect-gp').addEventListener('click', async () => {
             const device = new AltMeshGPIO(async (e) => {
@@ -897,9 +921,13 @@
                 element.querySelector('.status-button').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
             });
 
-            await device.connect();
-            devices.push(device);
             container.appendChild(element);
+            await device.connect();
+            if (device.device) {
+                devices.push(device);
+            } else {
+                container.removeChild(element);
+            }
         });
     </script>
 </body>
