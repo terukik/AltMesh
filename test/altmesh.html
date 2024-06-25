@@ -43,14 +43,16 @@
 
 <body>
     <h1>AltMesh</h1>
-    <button id="connect">Connect</button>
-    <button id="connect-bu"><span class="font-mono text-bu">&#x25A0;</span>Button</button>
-    <button id="connect-le"><span class="font-mono text-le">&#x25A0;</span>LED</button>
-    <button id="connect-ac"><span class="font-mono text-ac">&#x25A0;</span>Move</button>
-    <button id="connect-md"><span class="font-mono text-md">&#x25A0;</span>Motion</button>
-    <button id="connect-pa"><span class="font-mono text-pa">&#x25A0;</span>Brightness</button>
-    <button id="connect-th"><span class="font-mono text-th">&#x25A0;</span>Temperature & Humidity</button>
-    <button id="connect-gp"><span class="font-mono text-gp">&#x25A0;</span>GPIO</button>
+    <div>
+        <button id="connect">Connect</button>
+        <button id="connect-bu"><span class="font-mono text-bu">&#x25A0;</span>Button</button>
+        <button id="connect-le"><span class="font-mono text-le">&#x25A0;</span>LED</button>
+        <button id="connect-ac"><span class="font-mono text-ac">&#x25A0;</span>Move</button>
+        <button id="connect-md"><span class="font-mono text-md">&#x25A0;</span>Motion</button>
+        <button id="connect-pa"><span class="font-mono text-pa">&#x25A0;</span>Brightness</button>
+        <button id="connect-th"><span class="font-mono text-th">&#x25A0;</span>Temperature & Humidity</button>
+        <button id="connect-gp"><span class="font-mono text-gp">&#x25A0;</span>GPIO</button>
+    </div>
     <div id="device-info">
     </div>
     <div id="notification-info"></div>
@@ -494,6 +496,101 @@
         }
     </script>
     <script>
+        function createBlockComponent(color, items) {
+            const element = document.createElement('div');
+            element.className = 'container';
+            element.style.borderLeft = 'thick solid ' + color;
+            element.style.marginTop = '1em';
+            element.style.paddingLeft = '1em';
+            element.style.fontFamily = 'monospace';
+
+            items.forEach((e) => {
+                const container = document.createElement('div');
+                const label = document.createElement('span');
+                label.textContent = e.label + ': ';
+                const value = document.createElement('span');
+                value.className = e.class;
+                container.appendChild(label);
+                container.appendChild(value);
+                element.appendChild(container);
+            });
+
+            return element;
+        }
+
+        function createBuComponent() {
+            return createBlockComponent('#87c244', [
+                { class: 'block-type', label: 'Block type' },
+                { class: 'serial-number', label: 'Serial number' },
+                { class: 'version', label: 'Version' },
+                { class: 'battery-level', label: 'Battery level' },
+                { class: 'status-button', label: 'Status button' },
+                { class: 'status', label: 'Status' },
+            ]);
+        }
+        function createLeComponent() {
+            return createBlockComponent('#f0811e', [
+                { class: 'block-type', label: 'Block type' },
+                { class: 'serial-number', label: 'Serial number' },
+                { class: 'version', label: 'Version' },
+                { class: 'battery-level', label: 'Battery level' },
+                { class: 'status-button', label: 'Status button' },
+            ]);
+        }
+        function createAcComponent() {
+            return createBlockComponent('#23acd6', [
+                { class: 'block-type', label: 'Block type' },
+                { class: 'serial-number', label: 'Serial number' },
+                { class: 'version', label: 'Version' },
+                { class: 'battery-level', label: 'Battery level' },
+                { class: 'status-button', label: 'Status button' },
+                { class: 'event', label: 'Status button' },
+                { class: 'x', label: 'X' },
+                { class: 'y', label: 'Y' },
+                { class: 'z', label: 'Z' },
+                { class: 'orientation', label: 'Orientation' },
+            ]);
+        }
+        function createMdComponent() {
+            return createBlockComponent('#7bc9c2', [
+                { class: 'block-type', label: 'Block type' },
+                { class: 'serial-number', label: 'Serial number' },
+                { class: 'version', label: 'Version' },
+                { class: 'battery-level', label: 'Battery level' },
+                { class: 'status-button', label: 'Status button' },
+            ]);
+        }
+        function createPaComponent() {
+            return createBlockComponent('#659ed1', [
+                { class: 'block-type', label: 'Block type' },
+                { class: 'serial-number', label: 'Serial number' },
+                { class: 'version', label: 'Version' },
+                { class: 'battery-level', label: 'Battery level' },
+                { class: 'status-button', label: 'Status button' },
+            ]);
+        }
+        function createThComponent() {
+            return createBlockComponent('#6e72b4', [
+                { class: 'block-type', label: 'Block type' },
+                { class: 'serial-number', label: 'Serial number' },
+                { class: 'version', label: 'Version' },
+                { class: 'battery-level', label: 'Battery level' },
+                { class: 'status-button', label: 'Status button' },
+                { class: 'temperature', label: 'Temperature' },
+                { class: 'humidity', label: 'Humidity' },
+            ]);
+        }
+        function createGpComponent() {
+            return createBlockComponent('#afaeae', [
+                { class: 'block-type', label: 'Block type' },
+                { class: 'serial-number', label: 'Serial number' },
+                { class: 'version', label: 'Version' },
+                { class: 'battery-level', label: 'Battery level' },
+                { class: 'status-button', label: 'Status button' },
+            ]);
+        }
+    </script>
+    <script>
         let devices = [];
         document.ble_devices = devices;
         document.querySelector('#connect').addEventListener('click', async () => {
@@ -505,131 +602,304 @@
             const device = new AltMeshButton(async (e) => {
                 await device.write_with_response([0x00, 0x02, 0x01]);
             });
-            device.addEventListener('button', (e) => {
-                const status_name = { 0x01: 'singlepress', 0x02: 'longpress', 0x03: 'doublepress' }[e.status];
-                console.log(`button: ${status_name}`);
+            const element = createBuComponent();
+            const container = document.querySelector('#device-info');
+            device.addEventListener('disconnect', (e) => {
+                console.log(`disconnect: ${e}`);
+                container.removeChild(element);
+            });
+            device.addEventListener('serialnumber', (e) => {
+                console.log(`serialnumber: ${e.battery_level}`);
+                element.querySelector('.serial-number').innerHTML = `${e.serial_number}`;
+            });
+            device.addEventListener('blocktype', (e) => {
+                console.log(`blocktype: ${e.block_type}`);
+                element.querySelector('.block-type').innerHTML = `${e.block_type}`;
+            });
+            device.addEventListener('version', (e) => {
+                console.log(`version: ${e.battery_level}`);
+                element.querySelector('.version').innerHTML = `${e.version}`;
             });
             device.addEventListener('batterylevel', (e) => {
-                console.log(`batterylevel: ${e.battery_level}`);
+                console.log(`batterylevel: ${e.battery_level}%`);
+                element.querySelector('.battery-level').innerHTML = `${e.battery_level}%`;
             });
             device.addEventListener('statusbutton', (e) => {
                 const status_name = { 0x00: 'singlepress', 0x01: 'longpress' }[e.status];
                 console.log(`statusbutton: ${status_name}`);
+                element.querySelector('.status-button').innerHTML = status_name;
+                element.querySelector('.status-button').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
             });
-            device.addEventListener('disconnect', (e) => {
-                console.log(`disconnect: ${e}`);
+            device.addEventListener('button', (e) => {
+                const status_name = { 0x01: 'singlepress', 0x02: 'longpress', 0x03: 'doublepress' }[e.status];
+                console.log(`button: ${status_name}`);
+                element.querySelector('.status').innerHTML = status_name;
+                element.querySelector('.status').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
             });
+
             await device.connect();
             devices.push(device);
+            container.appendChild(element);
         });
         document.querySelector('#connect-le').addEventListener('click', async () => {
             const device = new AltMeshLED(async (e) => {
                 await device.write_with_response([0x00, 0x02, 0x01]);
             });
+            const element = createLeComponent();
+            const container = document.querySelector('#device-info');
+            device.addEventListener('disconnect', (e) => {
+                console.log(`disconnect: ${e}`);
+                container.removeChild(element);
+            });
+            device.addEventListener('serialnumber', (e) => {
+                console.log(`serialnumber: ${e.battery_level}`);
+                element.querySelector('.serial-number').innerHTML = `${e.serial_number}`;
+            });
+            device.addEventListener('blocktype', (e) => {
+                console.log(`blocktype: ${e.block_type}`);
+                element.querySelector('.block-type').innerHTML = `${e.block_type}`;
+            });
+            device.addEventListener('version', (e) => {
+                console.log(`version: ${e.battery_level}`);
+                element.querySelector('.version').innerHTML = `${e.version}`;
+            });
+            device.addEventListener('batterylevel', (e) => {
+                console.log(`batterylevel: ${e.battery_level}%`);
+                element.querySelector('.battery-level').innerHTML = `${e.battery_level}%`;
+            });
+            device.addEventListener('statusbutton', (e) => {
+                const status_name = { 0x00: 'singlepress', 0x01: 'longpress' }[e.status];
+                console.log(`statusbutton: ${status_name}`);
+                element.querySelector('.status-button').innerHTML = status_name;
+                element.querySelector('.status-button').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
+            });
+
             await device.connect();
             devices.push(device);
+            container.appendChild(element);
         });
         document.querySelector('#connect-ac').addEventListener('click', async () => {
             const device = new AltMeshMove(async (e) => {
                 await device.write_with_response([0x00, 0x02, 0x01]);
             });
-            device.addEventListener('tap', (e) => {
-                console.log(`tap: x=${e.x}, y=${e.y}, z=${e.z}`);
+            const element = createAcComponent();
+            const container = document.querySelector('#device-info');
+            device.addEventListener('disconnect', (e) => {
+                console.log(`disconnect: ${e}`);
+                container.removeChild(element);
             });
-            device.addEventListener('shake', (e) => {
-                console.log(`shake: x=${e.x}, y=${e.y}, z=${e.z}`);
+            device.addEventListener('serialnumber', (e) => {
+                console.log(`serialnumber: ${e.battery_level}`);
+                element.querySelector('.serial-number').innerHTML = `${e.serial_number}`;
             });
-            device.addEventListener('flip', (e) => {
-                console.log(`flip: x=${e.x}, y=${e.y}, z=${e.z}`);
+            device.addEventListener('blocktype', (e) => {
+                console.log(`blocktype: ${e.block_type}`);
+                element.querySelector('.block-type').innerHTML = `${e.block_type}`;
             });
-            device.addEventListener('orientation', (e) => {
-                console.log(`orientation: ${e.orientation}, x=${e.x}, y=${e.y}, z=${e.z}`);
+            device.addEventListener('version', (e) => {
+                console.log(`version: ${e.battery_level}`);
+                element.querySelector('.version').innerHTML = `${e.version}`;
             });
             device.addEventListener('batterylevel', (e) => {
-                console.log(`batterylevel: ${e.battery_level}`);
+                console.log(`batterylevel: ${e.battery_level}%`);
+                element.querySelector('.battery-level').innerHTML = `${e.battery_level}%`;
             });
             device.addEventListener('statusbutton', (e) => {
                 const status_name = { 0x00: 'singlepress', 0x01: 'longpress' }[e.status];
                 console.log(`statusbutton: ${status_name}`);
+                element.querySelector('.status-button').innerHTML = status_name;
+                element.querySelector('.status-button').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
             });
-            device.addEventListener('disconnect', (e) => {
-                console.log(`disconnect: ${e}`);
+            device.addEventListener('tap', (e) => {
+                console.log(`tap: x=${e.x}, y=${e.y}, z=${e.z}`);
+                element.querySelector('.event').innerHTML = 'tap';
+                element.querySelector('.event').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
+                element.querySelector('.x').innerHTML = `${e.x}`;
+                element.querySelector('.y').innerHTML = `${e.y}`;
+                element.querySelector('.z').innerHTML = `${e.z}`;
             });
+            device.addEventListener('shake', (e) => {
+                console.log(`shake: x=${e.x}, y=${e.y}, z=${e.z}`);
+                element.querySelector('.event').innerHTML = 'shake';
+                element.querySelector('.event').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
+                element.querySelector('.x').innerHTML = `${e.x}`;
+                element.querySelector('.y').innerHTML = `${e.y}`;
+                element.querySelector('.z').innerHTML = `${e.z}`;
+            });
+            device.addEventListener('flip', (e) => {
+                console.log(`flip: x=${e.x}, y=${e.y}, z=${e.z}`);
+                element.querySelector('.event').innerHTML = 'flip';
+                element.querySelector('.event').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
+                element.querySelector('.x').innerHTML = `${e.x}`;
+                element.querySelector('.y').innerHTML = `${e.y}`;
+                element.querySelector('.z').innerHTML = `${e.z}`;
+            });
+            device.addEventListener('orientation', (e) => {
+                console.log(`orientation: ${e.orientation}, x=${e.x}, y=${e.y}, z=${e.z}`);
+                element.querySelector('.orientation').innerHTML = `${e.orientation}`;
+                element.querySelector('.x').innerHTML = `${e.x}`;
+                element.querySelector('.y').innerHTML = `${e.y}`;
+                element.querySelector('.z').innerHTML = `${e.z}`;
+            });
+
             await device.connect();
             devices.push(device);
+            container.appendChild(element);
         });
         document.querySelector('#connect-md').addEventListener('click', async () => {
             const device = new AltMeshMotion(async (e) => {
                 await device.write_with_response([0x00, 0x02, 0x01]);
             });
+            const element = createMdComponent();
+            const container = document.querySelector('#device-info');
+            device.addEventListener('disconnect', (e) => {
+                console.log(`disconnect: ${e}`);
+                container.removeChild(element);
+            });
+            device.addEventListener('serialnumber', (e) => {
+                console.log(`serialnumber: ${e.battery_level}`);
+                element.querySelector('.serial-number').innerHTML = `${e.serial_number}`;
+            });
+            device.addEventListener('blocktype', (e) => {
+                console.log(`blocktype: ${e.block_type}`);
+                element.querySelector('.block-type').innerHTML = `${e.block_type}`;
+            });
+            device.addEventListener('version', (e) => {
+                console.log(`version: ${e.battery_level}`);
+                element.querySelector('.version').innerHTML = `${e.version}`;
+            });
             device.addEventListener('batterylevel', (e) => {
-                console.log(`batterylevel: ${e.battery_level}`);
+                console.log(`batterylevel: ${e.battery_level}%`);
+                element.querySelector('.battery-level').innerHTML = `${e.battery_level}%`;
             });
             device.addEventListener('statusbutton', (e) => {
                 const status_name = { 0x00: 'singlepress', 0x01: 'longpress' }[e.status];
                 console.log(`statusbutton: ${status_name}`);
+                element.querySelector('.status-button').innerHTML = status_name;
+                element.querySelector('.status-button').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
             });
-            device.addEventListener('disconnect', (e) => {
-                console.log(`disconnect: ${e}`);
-            });
+
             await device.connect();
             devices.push(device);
+            container.appendChild(element);
         });
         document.querySelector('#connect-pa').addEventListener('click', async () => {
             const device = new AltMeshBrightness(async (e) => {
                 await device.write_with_response([0x00, 0x02, 0x01]);
             });
+            const element = createPaComponent();
+            const container = document.querySelector('#device-info');
+            device.addEventListener('disconnect', (e) => {
+                console.log(`disconnect: ${e}`);
+                container.removeChild(element);
+            });
+            device.addEventListener('serialnumber', (e) => {
+                console.log(`serialnumber: ${e.battery_level}`);
+                element.querySelector('.serial-number').innerHTML = `${e.serial_number}`;
+            });
+            device.addEventListener('blocktype', (e) => {
+                console.log(`blocktype: ${e.block_type}`);
+                element.querySelector('.block-type').innerHTML = `${e.block_type}`;
+            });
+            device.addEventListener('version', (e) => {
+                console.log(`version: ${e.battery_level}`);
+                element.querySelector('.version').innerHTML = `${e.version}`;
+            });
             device.addEventListener('batterylevel', (e) => {
-                console.log(`batterylevel: ${e.battery_level}`);
+                console.log(`batterylevel: ${e.battery_level}%`);
+                element.querySelector('.battery-level').innerHTML = `${e.battery_level}%`;
             });
             device.addEventListener('statusbutton', (e) => {
                 const status_name = { 0x00: 'singlepress', 0x01: 'longpress' }[e.status];
                 console.log(`statusbutton: ${status_name}`);
+                element.querySelector('.status-button').innerHTML = status_name;
+                element.querySelector('.status-button').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
             });
-            device.addEventListener('disconnect', (e) => {
-                console.log(`disconnect: ${e}`);
-            });
+
             await device.connect();
             devices.push(device);
+            container.appendChild(element);
         });
         document.querySelector('#connect-th').addEventListener('click', async () => {
             const device = new AltMeshTempHumid(async (e) => {
                 await device.write_with_response([0x00, 0x02, 0x01]);
                 await device.write([0x01, 0x00, 0x01, 0x2C, 0x81, 0xB4, 0x80, 0x64, 0x00, 0x32, 0x00, 0x00, 0x01, 0x20]);
             });
-            device.addEventListener('temphumid', (e) => {
-                console.log(`temphumid: ${e.temperature}\u2103 ${e.humidity}%`);
+            const element = createThComponent();
+            const container = document.querySelector('#device-info');
+            device.addEventListener('disconnect', (e) => {
+                console.log(`disconnect: ${e}`);
+                container.removeChild(element);
+            });
+            device.addEventListener('serialnumber', (e) => {
+                console.log(`serialnumber: ${e.battery_level}`);
+                element.querySelector('.serial-number').innerHTML = `${e.serial_number}`;
+            });
+            device.addEventListener('blocktype', (e) => {
+                console.log(`blocktype: ${e.block_type}`);
+                element.querySelector('.block-type').innerHTML = `${e.block_type}`;
+            });
+            device.addEventListener('version', (e) => {
+                console.log(`version: ${e.battery_level}`);
+                element.querySelector('.version').innerHTML = `${e.version}`;
             });
             device.addEventListener('batterylevel', (e) => {
-                console.log(`batterylevel: ${e.battery_level}`);
+                console.log(`batterylevel: ${e.battery_level}%`);
+                element.querySelector('.battery-level').innerHTML = `${e.battery_level}%`;
             });
             device.addEventListener('statusbutton', (e) => {
                 const status_name = { 0x00: 'singlepress', 0x01: 'longpress' }[e.status];
                 console.log(`statusbutton: ${status_name}`);
+                element.querySelector('.status-button').innerHTML = status_name;
+                element.querySelector('.status-button').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
             });
-            device.addEventListener('disconnect', (e) => {
-                console.log(`disconnect: ${e}`);
+            device.addEventListener('temphumid', (e) => {
+                console.log(`temphumid: ${e.temperature}\u2103 ${e.humidity}%`);
+                element.querySelector('.temperature').innerHTML = `${e.temperature}\u2103`;
+                element.querySelector('.humidity').innerHTML = `${e.humidity}%`;
             });
+
             await device.connect();
             devices.push(device);
+            container.appendChild(element);
         });
         document.querySelector('#connect-gp').addEventListener('click', async () => {
             const device = new AltMeshGPIO(async (e) => {
                 await device.write_with_response([0x00, 0x02, 0x01]);
                 await device.write([0x01, 0x01, 0x07, 0x07, 0x00, 0x00, 0x02, 0x7F, 0x00, 0x01]);
             });
+            const element = createGpComponent();
+            const container = document.querySelector('#device-info');
+            device.addEventListener('disconnect', (e) => {
+                console.log(`disconnect: ${e}`);
+                container.removeChild(element);
+            });
+            device.addEventListener('serialnumber', (e) => {
+                console.log(`serialnumber: ${e.battery_level}`);
+                element.querySelector('.serial-number').innerHTML = `${e.serial_number}`;
+            });
+            device.addEventListener('blocktype', (e) => {
+                console.log(`blocktype: ${e.block_type}`);
+                element.querySelector('.block-type').innerHTML = `${e.block_type}`;
+            });
+            device.addEventListener('version', (e) => {
+                console.log(`version: ${e.battery_level}`);
+                element.querySelector('.version').innerHTML = `${e.version}`;
+            });
             device.addEventListener('batterylevel', (e) => {
-                console.log(`batterylevel: ${e.battery_level}`);
+                console.log(`batterylevel: ${e.battery_level}%`);
+                element.querySelector('.battery-level').innerHTML = `${e.battery_level}%`;
             });
             device.addEventListener('statusbutton', (e) => {
                 const status_name = { 0x00: 'singlepress', 0x01: 'longpress' }[e.status];
                 console.log(`statusbutton: ${status_name}`);
+                element.querySelector('.status-button').innerHTML = status_name;
+                element.querySelector('.status-button').animate({ opacity: [1.0, 0.2] }, { duration: 1000, fill: 'forwards' });
             });
-            device.addEventListener('disconnect', (e) => {
-                console.log(`disconnect: ${e}`);
-            });
+
             await device.connect();
             devices.push(device);
+            container.appendChild(element);
         });
     </script>
 </body>
