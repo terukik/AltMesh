@@ -7,8 +7,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AltMesh</title>
     <style>
+        .float-left {
+            float: left;
+        }
+
+        .w-80 {
+            width: 20rem;
+        }
+
         .font-mono {
             font-family: monospace;
+        }
+
+        .text-start {
+            text-align: start;
         }
 
         .text-bu {
@@ -37,6 +49,50 @@
 
         .text-gp {
             color: #afaeae;
+        }
+
+        .pl-4 {
+            padding-left: 4px;
+        }
+
+        .mb-4 {
+            margin-bottom: 4px;
+        }
+
+        .border-l-4 {
+            border-left-width: 4px;
+        }
+
+        .border-l-bu-500 {
+            border-left-color: #87c244;
+        }
+
+        .border-l-le-500 {
+            border-left-color: #f0811e;
+        }
+
+        .border-l-ac-500 {
+            border-left-color: #23acd6;
+        }
+
+        .border-l-md-500 {
+            border-left-color: #7bc9c2;
+        }
+
+        .border-l-pa-500 {
+            border-left-color: #659ed1;
+        }
+
+        .border-l-th-500 {
+            border-left-color: #6e72b4;
+        }
+
+        .border-l-gp-500 {
+            border-left-color: #afaeae;
+        }
+
+        .border-l-solid {
+            border-left-style: solid;
         }
     </style>
 </head>
@@ -496,19 +552,16 @@
         }
     </script>
     <script>
-        function createBlockComponent(color, items) {
-            const element = document.createElement('div');
-            element.className = 'container';
-            element.style.borderLeft = 'thick solid ' + color;
-            element.style.marginTop = '1em';
-            element.style.paddingLeft = '1em';
-            element.style.fontFamily = 'monospace';
+        function createBlockComponent(className, items) {
+            const element = document.createElement('table');
+            element.className = className;
 
             items.forEach((e) => {
-                const container = document.createElement('div');
-                const label = document.createElement('span');
-                label.textContent = e.label + ': ';
-                const value = document.createElement('span');
+                const container = document.createElement('tr');
+                const label = document.createElement('th');
+                label.className = 'text-start';
+                label.textContent = e.label;
+                const value = document.createElement('td');
                 value.className = e.class;
                 container.appendChild(label);
                 container.appendChild(value);
@@ -519,7 +572,7 @@
         }
 
         function createBuComponent() {
-            return createBlockComponent('#87c244', [
+            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-bu-500 border-l-solid', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
@@ -529,7 +582,7 @@
             ]);
         }
         function createLeComponent() {
-            return createBlockComponent('#f0811e', [
+            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-le-500 border-l-solid', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
@@ -538,7 +591,7 @@
             ]);
         }
         function createAcComponent() {
-            return createBlockComponent('#23acd6', [
+            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-ac-500 border-l-solid', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
@@ -552,7 +605,7 @@
             ]);
         }
         function createMdComponent() {
-            return createBlockComponent('#7bc9c2', [
+            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-md-500 border-l-solid', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
@@ -561,7 +614,7 @@
             ]);
         }
         function createPaComponent() {
-            return createBlockComponent('#659ed1', [
+            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-pa-500 border-l-solid', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
@@ -570,7 +623,7 @@
             ]);
         }
         function createThComponent() {
-            return createBlockComponent('#6e72b4', [
+            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-th-500 border-l-solid', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
@@ -581,7 +634,7 @@
             ]);
         }
         function createGpComponent() {
-            return createBlockComponent('#afaeae', [
+            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-gp-500 border-l-solid', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
