@@ -345,8 +345,13 @@
 
         // 0x00: LE, #f0811e
         class AltMeshLED extends AltMeshBase {
-            constructor() {
+            constructor(callback) {
                 super('MESH-100LE');
+                this.addEventListener('blocktypedetected', callback);
+                this.addEventListener('notify', (data) => {
+                    // console.debug('>>>> notify', data);
+                    // console.debug('<<<< notify');
+                });
             }
             // LED write
             // - LED点灯指示: 0x01, 0x00, red[2], green[2], blue[2], ontime[2], oncycle[2], offcycle[2], pattern
