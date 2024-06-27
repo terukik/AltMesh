@@ -11,6 +11,10 @@
             float: left;
         }
 
+        .w-40 {
+            width: 10rem;
+        }
+
         .w-80 {
             width: 20rem;
         }
@@ -559,12 +563,12 @@
     <script>
         function createBlockComponent(className, items) {
             const element = document.createElement('table');
-            element.className = className;
+            element.className = ['float-left w-80 pl-4 mb-4 border-l-4 border-l-bu-500 border-l-solid', className].join(' ');
 
             items.forEach((e) => {
                 const container = document.createElement('tr');
                 const label = document.createElement('th');
-                label.className = 'text-start';
+                label.className = 'text-start w-40';
                 label.textContent = e.label;
                 const value = document.createElement('td');
                 value.className = e.class;
@@ -577,7 +581,7 @@
         }
 
         function createBuComponent() {
-            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-bu-500 border-l-solid', [
+            return createBlockComponent('border-l-bu-500', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
@@ -587,7 +591,7 @@
             ]);
         }
         function createLeComponent() {
-            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-le-500 border-l-solid', [
+            return createBlockComponent('border-l-le-500', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
@@ -596,13 +600,13 @@
             ]);
         }
         function createAcComponent() {
-            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-ac-500 border-l-solid', [
+            return createBlockComponent('border-l-ac-500', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
                 { class: 'battery-level', label: 'Battery level' },
                 { class: 'status-button', label: 'Status button' },
-                { class: 'event', label: 'Status button' },
+                { class: 'event', label: 'Event' },
                 { class: 'x', label: 'X' },
                 { class: 'y', label: 'Y' },
                 { class: 'z', label: 'Z' },
@@ -610,7 +614,7 @@
             ]);
         }
         function createMdComponent() {
-            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-md-500 border-l-solid', [
+            return createBlockComponent('border-l-md-500', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
@@ -619,7 +623,7 @@
             ]);
         }
         function createPaComponent() {
-            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-pa-500 border-l-solid', [
+            return createBlockComponent('border-l-pa-500', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
@@ -628,7 +632,7 @@
             ]);
         }
         function createThComponent() {
-            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-th-500 border-l-solid', [
+            return createBlockComponent('border-l-th-500', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
@@ -639,7 +643,7 @@
             ]);
         }
         function createGpComponent() {
-            return createBlockComponent('float-left w-80 pl-4 mb-4 border-l-4 border-l-gp-500 border-l-solid', [
+            return createBlockComponent('border-l-gp-500', [
                 { class: 'block-type', label: 'Block type' },
                 { class: 'serial-number', label: 'Serial number' },
                 { class: 'version', label: 'Version' },
